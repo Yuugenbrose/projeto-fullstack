@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useContext } from 'react';
 import { TextField, Button, Box, Typography, Alert } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
@@ -6,60 +6,56 @@ import ThunderstormIcon from '@mui/icons-material/Thunderstorm';
 import CloudIcon from '@mui/icons-material/Cloud';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
 import fundo from '../assets/images/clima.jpg';
-import WeatherDisplay from './WeatherDisplay';
-
+import { WeatherContext } from '../context/WeatherContext'; 
 const Formulario = () => {
   const cidadeRef = useRef();
-  const [erro, setErro] = useState('');
-  const [dadosClima, setDadosClima] = useState(null);
+  const { setDadosClima, erro, setErro } = useContext(WeatherContext); 
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const cidade = cidadeRef.current.value.trim();
+  console.log("Iniciando busca...");
+  e.preventDefault();
+  const cidade = cidadeRef.current.value.trim();
 
-    if (!cidade) {
-      setErro('Por favor, insira o nome de uma cidade.');
-      return;
+  if (!cidade) {
+    setErro('Por favor, insira o nome de uma cidade.');
+    return;
+  }
+
+  setErro('');
+  try {
+    const geoRes = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+        cidade
+      )}&format=json&limit=1`
+    );
+    const geoData = await geoRes.json();
+    console.log("GeoData:", geoData);
+
+    if (!geoData.length) {
+      throw new Error('Cidade não encontrada. Verifique o nome e tente novamente.');
     }
 
-    setErro('');
-    try {
-      console.log('Buscando coordenadas para a cidade:', cidade);
-      const geoRes = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          cidade
-        )}&format=json&limit=1`
-      );
-      const geoData = await geoRes.json();
-      console.log('Dados de geocoding:', geoData);
+    const { lat, lon } = geoData[0];
+    const response = await fetch(`https://api.weather.gov/points/${lat},${lon}`);
+    if (!response.ok) throw new Error('Erro ao buscar dados da API.');
 
-      if (!geoData.length) {
-        throw new Error('Cidade não encontrada. Verifique o nome e tente novamente.');
-      }
-      const { lat, lon } = geoData[0];
-      console.log('Coordenadas obtidas:', { lat, lon });
-      const response = await fetch(`https://api.weather.gov/points/${lat},${lon}`);
-      if (!response.ok) {
-        throw new Error('Erro ao buscar dados da API.');
-      }
+    const data = await response.json();
+    const forecastUrl = data.properties.forecast;
 
-      const data = await response.json();
-      console.log('Dados do endpoint /points:', data);
-      const forecastUrl = data.properties.forecast;
-      console.log('URL da previsão detalhada:', forecastUrl);
-      const forecastRes = await fetch(forecastUrl);
-      if (!forecastRes.ok) {
-        throw new Error('Erro ao buscar previsão detalhada.');
-      }
-      const forecastData = await forecastRes.json();
-      console.log('Dados da previsão detalhada:', forecastData);
-      setDadosClima(forecastData);
-      console.log('Estado atualizado com os dados climáticos:', forecastData);
-    } catch (error) {
-      console.error('Erro:', error);
-      setErro(error.message || 'Erro ao buscar os dados climáticos.');
-    }
-  };
+    const forecastRes = await fetch(forecastUrl);
+    if (!forecastRes.ok) throw new Error('Erro ao buscar previsão detalhada.');
+
+    const forecastData = await forecastRes.json();
+    console.log("forecastData:", forecastData); 
+
+    setDadosClima(forecastData); 
+  } catch (error) {
+    console.error('Erro:', error.message);
+    setErro(error.message || 'Erro ao buscar os dados climáticos.');
+  }
+};
+
+
   return (
     <Box sx={{ position: 'relative', minHeight: '100vh', overflow: 'auto' }}>
       {/* Fundo */}
@@ -122,13 +118,9 @@ const Formulario = () => {
           </Button>
         </Box>
       </Box>
-
-      {/* Exibição dos dados climáticos */}
-      {dadosClima && console.log('Dados passados para WeatherDisplay:', dadosClima)}
-      {dadosClima && <WeatherDisplay dados={dadosClima} />}
-      {dadosClima && console.log('Dados recebidos pelo WeatherDisplay:', dadosClima)}
     </Box>
   );
+  
 };
 
 export default Formulario;
