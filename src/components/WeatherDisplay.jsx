@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Box, Typography, List, ListItem, ListItemText } from '@mui/material';
+import { WeatherContext } from '../context/WeatherContext'; 
 
-const WeatherDisplay = ({ dados }) => {
-  console.log('Dados recebidos pelo WeatherDisplay:', dados);
+const WeatherDisplay = () => {
+  const { dadosClima } = useContext(WeatherContext);
+  console.log('Dados do contexto:', dadosClima); 
 
-  if (!dados || !dados.properties || !dados.properties.periods) {
+  if (!dadosClima || !dadosClima.properties || !dadosClima.properties.periods) {
     return (
       <Typography sx={{ mt: 4, color: 'red' }}>
         Não há dados disponíveis para exibição. Verifique a estrutura dos dados retornados.
@@ -12,7 +14,7 @@ const WeatherDisplay = ({ dados }) => {
     );
   }
 
-  const periods = dados.properties.periods;
+  const periods = dadosClima.properties.periods;
 
   return (
     <Box
@@ -22,6 +24,8 @@ const WeatherDisplay = ({ dados }) => {
         border: '1px solid #ccc',
         borderRadius: 2,
         backgroundColor: '#fff',
+        maxWidth: 600,
+        margin: '0 auto',
       }}
     >
       <Typography variant="h6" gutterBottom>
@@ -41,17 +45,4 @@ const WeatherDisplay = ({ dados }) => {
   );
 };
 
-const App = ({ dadosClima }) => {
-  return (
-    <>
-      {dadosClima && console.log('Dados passados para WeatherDisplay:', dadosClima)}
-      {dadosClima && (
-  <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 2 }}>
-    <WeatherDisplay dados={dadosClima} />
-  </Box>
-)}
-
-    </>
-  );
-};
 export default WeatherDisplay;
